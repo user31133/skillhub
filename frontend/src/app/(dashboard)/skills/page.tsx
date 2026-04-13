@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { Suspense, useEffect, useState, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { getSkills, SkillRead, PaginatedResponse } from "@/services/skills"
@@ -62,6 +62,14 @@ function getPageNumbers(current: number, total: number): (number | "ellipsis")[]
 }
 
 export default function SkillsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SkillsPageInner />
+    </Suspense>
+  )
+}
+
+function SkillsPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
