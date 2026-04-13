@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: skillhub-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./data/skillhub.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: '["https://skillhub-frontend.onrender.com"]'
+
+  - type: web
+    name: skillhub-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    dockerBuildArgs:
+      - NEXT_PUBLIC_API_URL=https://skillhub-backend.onrender.com/api
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://skillhub-backend.onrender.com/api

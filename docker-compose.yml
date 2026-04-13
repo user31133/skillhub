@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "9001:8000"
+    volumes:
+      - skillhub_data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/skillhub.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - CORS_ORIGINS=["http://localhost:3005","http://localhost:3001"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:9001/api
+    ports:
+      - "3005:3000"
+    depends_on:
+      - backend
+
+volumes:
+  skillhub_data:

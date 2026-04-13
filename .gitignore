@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ruff_cache/
+
+# Database
+*.db
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Node (for frontend later)
+node_modules/
+.next/
+*.md
+*.png
+.claude/
+.mcp.json
+.playwright-mcp/
