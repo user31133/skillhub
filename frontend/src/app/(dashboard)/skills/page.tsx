@@ -3,11 +3,21 @@
 import { Suspense, useEffect, useState, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { getSkills, SkillRead, PaginatedResponse } from "@/services/skills"
+import {
+  getSkills,
+  getSavedSkillIds,
+  getSavedSkills,
+  saveSkill,
+  unsaveSkill,
+  SkillRead,
+  PaginatedResponse,
+} from "@/services/skills"
 import { SkillCardList, SkillCardSkeleton } from "@/components/ui/skill-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Combobox } from "@/components/ui/combobox"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { toast } from "sonner"
 import {
   Pagination,
   PaginationContent,
@@ -79,10 +89,16 @@ function SkillsPageInner() {
   const sort = searchParams.get("sort") ?? "newest"
   const page = Number(searchParams.get("page") ?? "1")
 
+  const tab = searchParams.get("tab") === "saved" ? "saved" : "all"
+
   const [searchInput, setSearchInput] = useState(q)
   const [result, setResult] = useState<PaginatedResponse<SkillRead> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
+  const [savedSkills, setSavedSkills] = useState<SkillRead[] | null>(null)
+  const [savedLoading, setSavedLoading] = useState(false)
+  const [savedError, setSavedError] = useState(false)
 
   function buildUrl(overrides: Record<string, string | number>) {
     const params = new URLSearchParams()
@@ -134,6 +150,65 @@ function SkillsPageInner() {
     fetchSkills()
   }, [fetchSkills])
 
+  const loadSavedIds = useCallback(async () => {
+    try {
+      const ids = await getSavedSkillIds()
+      setSavedIds(new Set(ids))
+    } catch {
+      setSavedIds(new Set())
+    }
+  }, [])
+
+  const loadSavedSkills = useCallback(async () => {
+    setSavedLoading(true)
+    setSavedError(false)
+    try {
+      const data = await getSavedSkills()
+      setSavedSkills(data)
+      setSavedIds(new Set(data.map((s) => s.id)))
+    } catch {
+      setSavedSkills(null)
+      setSavedError(true)
+    } finally {
+      setSavedLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSavedIds()
+  }, [loadSavedIds])
+
+  useEffect(() => {
+    if (tab === "saved") loadSavedSkills()
+  }, [tab, loadSavedSkills])
+
+  async function handleToggleSave(id: string, nextSaved: boolean) {
+    const prev = new Set(savedIds)
+    const next = new Set(savedIds)
+    if (nextSaved) next.add(id)
+    else next.delete(id)
+    setSavedIds(next)
+    try {
+      if (nextSaved) await saveSkill(id)
+      else await unsaveSkill(id)
+      if (tab === "saved") {
+        if (nextSaved) await loadSavedSkills()
+        else setSavedSkills((list) => list?.filter((s) => s.id !== id) ?? null)
+      }
+    } catch {
+      setSavedIds(prev)
+      toast.error(nextSaved ? "Failed to save skill" : "Failed to remove saved skill")
+    }
+  }
+
+  function setTab(value: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (value === "saved") params.set("tab", "saved")
+    else params.delete("tab")
+    const str = params.toString()
+    router.push(`/skills${str ? `?${str}` : ""}`)
+  }
+
   // Debounce search input → URL param
   useEffect(() => {
     if (searchInput === q) return
@@ -180,6 +255,13 @@ function SkillsPageInner() {
         </Button>
       </div>
 
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="saved">Saved</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="flex flex-col gap-6 mt-4">
       <div className="flex flex-wrap gap-3">
         <Input
           placeholder="Search skills…"
@@ -242,6 +324,8 @@ function SkillsPageInner() {
       ) : result && result.items.length > 0 ? (
         <>
           <SkillCardList
+            savedIds={savedIds}
+            onToggleSave={handleToggleSave}
             items={result.items.map((skill, index) => ({
               id: skill.id,
               index,
@@ -320,6 +404,51 @@ function SkillsPageInner() {
           )}
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="saved" className="flex flex-col gap-6 mt-4">
+          {savedLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SkillCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : savedError ? (
+            <div className="text-center py-20 border border-dashed border-border rounded-xl bg-muted/10">
+              <p className="text-sm text-muted-foreground">Failed to load saved skills.</p>
+              <button
+                onClick={loadSavedSkills}
+                className="mt-2 inline-block text-sm underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors duration-150"
+              >
+                Retry
+              </button>
+            </div>
+          ) : savedSkills && savedSkills.length > 0 ? (
+            <SkillCardList
+              savedIds={savedIds}
+              onToggleSave={handleToggleSave}
+              items={savedSkills.map((skill, index) => ({
+                id: skill.id,
+                index,
+                name: skill.name,
+                description: skill.description,
+                category: skill.category,
+                framework: skill.framework,
+                prompt: skill.prompt,
+                averageRating: skill.avg_rating,
+                reviewCount: skill.review_count,
+                installCount: skill.installs,
+                authorId: skill.author_id,
+                authorName: skill.author.name,
+              }))}
+            />
+          ) : (
+            <div className="text-center py-20 border border-dashed border-border rounded-xl bg-muted/10">
+              <p className="text-sm text-muted-foreground">You haven&apos;t saved any skills yet.</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

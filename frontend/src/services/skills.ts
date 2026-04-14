@@ -114,3 +114,19 @@ export async function updateSkill(id: string, data: SkillUpdate): Promise<SkillR
 export async function deleteSkill(id: string): Promise<void> {
   return fetchAPI(`/skills/${id}`, { method: "DELETE" })
 }
+
+export async function getSavedSkills(): Promise<SkillRead[]> {
+  return fetchAPI("/skills/saved")
+}
+
+export async function getSavedSkillIds(): Promise<string[]> {
+  return fetchAPI("/skills/saved/ids")
+}
+
+export async function saveSkill(id: string): Promise<void> {
+  return fetchAPI(`/skills/${id}/save`, { method: "POST" })
+}
+
+export async function unsaveSkill(id: string): Promise<void> {
+  return fetchAPI(`/skills/${id}/save`, { method: "DELETE" })
+}

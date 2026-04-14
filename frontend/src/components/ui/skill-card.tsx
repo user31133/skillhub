@@ -20,6 +20,7 @@ import {
   Star,
   Download,
   Check,
+  Bookmark,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -42,6 +43,8 @@ export type SkillCardListProps = {
   items: SkillCardItem[]
   className?: string
   gridClassName?: string
+  savedIds?: Set<string>
+  onToggleSave?: (id: string, nextSaved: boolean) => void
 }
 
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -60,7 +63,7 @@ function getCategoryIcon(category: string): React.ReactNode {
   return categoryIcons[category] ?? <Sparkles className="w-4 h-4" strokeWidth={1.5} />
 }
 
-export function SkillCardList({ items, className, gridClassName }: SkillCardListProps) {
+export function SkillCardList({ items, className, gridClassName, savedIds, onToggleSave }: SkillCardListProps) {
   const router = useRouter()
   const [selectedCard, setSelectedCard] = React.useState<SkillCardItem | null>(null)
   const [hoveredCard, setHoveredCard] = React.useState<string | number | null>(null)
@@ -85,7 +88,8 @@ export function SkillCardList({ items, className, gridClassName }: SkillCardList
       <div className={gridClassName || "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
         {items.map((item) => {
           const tags = [item.category, item.framework].filter(Boolean) as string[]
-          
+          const isSaved = savedIds?.has(String(item.id)) ?? false
+
           return (
             <motion.button
               key={item.id}
@@ -114,16 +118,47 @@ export function SkillCardList({ items, className, gridClassName }: SkillCardList
                         {String(item.index + 1).padStart(2, "0")}
                       </span>
                     </div>
-                    <motion.div
-                      initial={{ opacity: 0, x: -4 }}
-                      animate={{
-                        opacity: hoveredCard === item.id ? 1 : 0,
-                        x: hoveredCard === item.id ? 0 : -4,
-                      }}
-                      transition={{ duration: 0.1, ease: "easeOut" }}
-                    >
-                      <ChevronRight className="w-4 h-4 text-foreground/60" strokeWidth={1.5} />
-                    </motion.div>
+                    <div className="flex items-center gap-1">
+                      {onToggleSave && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={isSaved ? "Unsave skill" : "Save skill"}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onToggleSave(String(item.id), !isSaved)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              onToggleSave(String(item.id), !isSaved)
+                            }
+                          }}
+                          className={cn(
+                            "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+                            "hover:bg-foreground/[0.06]",
+                            isSaved ? "text-emerald-500" : "text-foreground/40"
+                          )}
+                        >
+                          <Bookmark
+                            className="w-4 h-4"
+                            strokeWidth={1.5}
+                            fill={isSaved ? "currentColor" : "none"}
+                          />
+                        </span>
+                      )}
+                      <motion.div
+                        initial={{ opacity: 0, x: -4 }}
+                        animate={{
+                          opacity: hoveredCard === item.id ? 1 : 0,
+                          x: hoveredCard === item.id ? 0 : -4,
+                        }}
+                        transition={{ duration: 0.1, ease: "easeOut" }}
+                      >
+                        <ChevronRight className="w-4 h-4 text-foreground/60" strokeWidth={1.5} />
+                      </motion.div>
+                    </div>
                   </div>
 
                   <h3 className="text-[14px] font-medium leading-[1.5] text-foreground mb-2">

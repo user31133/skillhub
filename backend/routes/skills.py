@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 
 from auth import get_current_user
 from database import get_db
-from models import Skill, SkillCategory, SkillFramework, User
+from models import SavedSkill, Skill, SkillCategory, SkillFramework, User
 from schemas import PaginatedResponse, SkillCreate, SkillRead, SkillUpdate
 
 router = APIRouter(prefix="/api/skills", tags=["Skills"])
@@ -80,6 +80,71 @@ async def get_my_skills(
     )
     result = await db.execute(query)
     return result.unique().scalars().all()
+
+
+@router.get("/saved", response_model=list[SkillRead])
+async def get_saved_skills(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    query = (
+        select(Skill)
+        .join(SavedSkill, SavedSkill.skill_id == Skill.id)
+        .options(joinedload(Skill.author))
+        .where(SavedSkill.user_id == current_user.id, Skill.is_deleted == False)
+        .order_by(SavedSkill.created_at.desc())
+    )
+    result = await db.execute(query)
+    return result.unique().scalars().all()
+
+
+@router.get("/saved/ids", response_model=list[str])
+async def get_saved_skill_ids(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(SavedSkill.skill_id).where(SavedSkill.user_id == current_user.id)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+@router.post("/{skill_id}/save", status_code=status.HTTP_201_CREATED)
+async def save_skill(
+    skill_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    skill_query = select(Skill).where(Skill.id == skill_id, Skill.is_deleted == False)
+    skill_result = await db.execute(skill_query)
+    if not skill_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found")
+
+    existing_query = select(SavedSkill).where(
+        SavedSkill.user_id == current_user.id, SavedSkill.skill_id == skill_id
+    )
+    existing = await db.execute(existing_query)
+    if existing.scalar_one_or_none():
+        return {"saved": True}
+
+    db.add(SavedSkill(user_id=current_user.id, skill_id=skill_id))
+    await db.flush()
+    return {"saved": True}
+
+
+@router.delete("/{skill_id}/save", status_code=status.HTTP_204_NO_CONTENT)
+async def unsave_skill(
+    skill_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(SavedSkill).where(
+        SavedSkill.user_id == current_user.id, SavedSkill.skill_id == skill_id
+    )
+    result = await db.execute(query)
+    saved = result.scalar_one_or_none()
+    if saved:
+        await db.delete(saved)
+        await db.flush()
 
 
 @router.get("/{skill_id}", response_model=SkillRead)

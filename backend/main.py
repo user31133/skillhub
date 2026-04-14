@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from database import Base, engine
+from routes.admin import router as admin_router
 from routes.auth import router as auth_router
 from routes.dashboard import router as dashboard_router
 from routes.reviews import router as reviews_router
@@ -34,6 +35,7 @@ app.include_router(skills_router)
 app.include_router(reviews_router)
 app.include_router(users_router)
 app.include_router(dashboard_router)
+app.include_router(admin_router)
 
 
 @app.get("/")

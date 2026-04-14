@@ -104,3 +104,13 @@ class Review(Base):
 
     skill: Mapped["Skill"] = relationship(back_populates="reviews", lazy="noload")
     user: Mapped["User"] = relationship(back_populates="reviews", lazy="noload")
+
+
+class SavedSkill(Base):
+    __tablename__ = "saved_skills"
+    __table_args__ = (UniqueConstraint("user_id", "skill_id", name="uq_saved_user_skill"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    skill_id: Mapped[str] = mapped_column(String(36), ForeignKey("skills.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
