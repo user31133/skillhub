@@ -32,3 +32,23 @@ export async function updateUserRole(
     body: JSON.stringify({ role }),
   })
 }
+
+export interface AdminUserUpdate {
+  name?: string
+  email?: string
+  bio?: string
+}
+
+export async function updateAdminUser(
+  userId: string,
+  data: AdminUserUpdate
+): Promise<UserProfile> {
+  return fetchAPI(`/admin/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteAdminUser(userId: string): Promise<void> {
+  return fetchAPI(`/admin/users/${userId}`, { method: "DELETE" })
+}

@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 
 from auth import get_current_user
 from database import get_db
-from models import SavedSkill, Skill, SkillCategory, SkillFramework, User
+from models import SavedSkill, Skill, SkillCategory, SkillFramework, User, UserRole
 from schemas import PaginatedResponse, SkillCreate, SkillRead, SkillUpdate
 
 router = APIRouter(prefix="/api/skills", tags=["Skills"])
@@ -192,7 +192,7 @@ async def update_skill(
     skill = result.scalar_one_or_none()
     if not skill:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found")
-    if skill.author_id != current_user.id:
+    if skill.author_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this skill")
 
     update_data = data.model_dump(exclude_unset=True)
@@ -218,7 +218,7 @@ async def delete_skill(
     skill = result.scalar_one_or_none()
     if not skill:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found")
-    if skill.author_id != current_user.id:
+    if skill.author_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this skill")
 
     skill.is_deleted = True

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import get_current_user
 from database import get_db
-from models import Skill, User, UserRole
+from models import Review, SavedSkill, Skill, User, UserRole
 from schemas import PaginatedResponse, UserProfile
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -21,6 +21,12 @@ async def get_current_admin(current_user: User = Depends(get_current_user)) -> U
 
 class RoleUpdate(BaseModel):
     role: UserRole
+
+
+class UserUpdate(BaseModel):
+    name: str | None = None
+    email: str | None = None
+    bio: str | None = None
 
 
 @router.get("/users", response_model=PaginatedResponse[UserProfile])
@@ -135,5 +141,78 @@ async def update_user_role(
         created_at=user.created_at,
         skill_count=skill_count,
     )
+
+
+@router.patch("/users/{user_id}", response_model=UserProfile)
+async def update_user(
+    user_id: str,
+    data: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    update_data = data.model_dump(exclude_unset=True)
+
+    if "email" in update_data and update_data["email"] != user.email:
+        existing = await db.execute(select(User).where(User.email == update_data["email"]))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use")
+
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    await db.flush()
+    await db.refresh(user)
+
+    count_result = await db.execute(
+        select(func.count(Skill.id)).where(
+            Skill.author_id == user.id, Skill.is_deleted == False
+        )
+    )
+    skill_count = count_result.scalar_one()
+
+    return UserProfile(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        bio=user.bio,
+        avatar_url=user.avatar_url,
+        role=user.role,
+        created_at=user.created_at,
+        skill_count=skill_count,
+    )
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    if user_id == current_admin.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete your own account")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user_skill_ids = (
+        await db.execute(select(Skill.id).where(Skill.author_id == user_id))
+    ).scalars().all()
+
+    if user_skill_ids:
+        await db.execute(SavedSkill.__table__.delete().where(SavedSkill.skill_id.in_(user_skill_ids)))
+        await db.execute(Review.__table__.delete().where(Review.skill_id.in_(user_skill_ids)))
+        await db.execute(Skill.__table__.delete().where(Skill.id.in_(user_skill_ids)))
+
+    await db.execute(SavedSkill.__table__.delete().where(SavedSkill.user_id == user_id))
+    await db.execute(Review.__table__.delete().where(Review.user_id == user_id))
+    await db.delete(user)
+    await db.flush()
 
 

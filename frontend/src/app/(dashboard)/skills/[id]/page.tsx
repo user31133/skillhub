@@ -166,6 +166,8 @@ export default function SkillDetailPage() {
   }
 
   const isOwner = user?.id === skill.author_id
+  const isAdmin = user?.role === "admin"
+  const canManage = isOwner || isAdmin
   const hasReviewed = reviews.some((r) => r.user_id === user?.id)
   const canReview = !!user && !isOwner && !hasReviewed
 
@@ -180,7 +182,7 @@ export default function SkillDetailPage() {
       <div className="flex flex-col gap-4 -mt-4">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight">{skill.name}</h1>
-          {isOwner && (
+          {canManage && (
             <div className="flex items-center gap-2 shrink-0">
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/skills/${id}/edit`}>

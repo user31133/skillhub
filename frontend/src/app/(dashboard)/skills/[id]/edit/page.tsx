@@ -61,7 +61,7 @@ export default function EditSkillPage() {
     async function load() {
       try {
         const skill = await getSkill(id)
-        if (user && skill.author_id !== user.id) {
+        if (user && skill.author_id !== user.id && user.role !== "admin") {
           router.replace(`/skills/${id}`)
           return
         }
