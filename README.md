@@ -1,3 +1,9 @@
+# Login Password:  admin@skillhub.com password123
+
+# Figma 
+https://www.figma.com/design/vFub3BZpaCE2b1bFwmi8IL/Untitled?node-id=0-1&t=qLDmkI2L8kstsHnT-1
+
+
 # SkillHub — AI Agent Skills Marketplace
 
 Full-stack SPA: каталог AI-агентских навыков с аутентификацией, ролями, CRUD, избранным и админ-панелью.
