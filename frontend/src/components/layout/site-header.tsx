@@ -87,19 +87,19 @@ export function SiteHeader({ isDashboard }: SiteHeaderProps) {
   ]
 
   const rightElements = (
-    <div className="flex items-center gap-2 border-l border-border pl-4 ml-4">
+    <div className="flex items-center gap-2 md:border-l md:border-border md:pl-4 md:ml-4">
       {themeToggle}
       {!user ? (
-        <>
+        <div className="hidden md:flex items-center gap-2">
           <Button variant="ghost" asChild>
             <Link href="/login">Sign In</Link>
           </Button>
           <Button asChild>
             <Link href="/register">Get Started</Link>
           </Button>
-        </>
+        </div>
       ) : (
-        <ShiftingDropdown tabs={userDropdownTabs} />
+        <ShiftingDropdown tabs={userDropdownTabs} className="hidden md:flex" />
       )}
     </div>
   )
