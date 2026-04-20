@@ -99,7 +99,18 @@ export function SiteHeader({ isDashboard }: SiteHeaderProps) {
           </Button>
         </div>
       ) : (
-        <ShiftingDropdown tabs={userDropdownTabs} className="hidden md:flex" />
+        <>
+          <ShiftingDropdown tabs={userDropdownTabs} className="hidden md:flex" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            className="md:hidden text-destructive hover:text-destructive hover:bg-destructive/10"
+            aria-label="Logout"
+          >
+            <LogOut className="h-[1.2rem] w-[1.2rem]" />
+          </Button>
+        </>
       )}
     </div>
   )
