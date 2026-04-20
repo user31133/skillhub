@@ -4,9 +4,11 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { ChevronRight, X } from "lucide-react"
+import { ChevronRight, X, LogOut } from "lucide-react"
 import { useSidebar } from "@/context/sidebar-context"
 import { AnimatePresence, motion } from "motion/react"
+import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
 
 export interface SidebarLink {
   icon: React.ElementType
@@ -27,10 +29,18 @@ export interface SidebarComponentProps {
 function SidebarNav({ mainLinks, user }: SidebarComponentProps) {
   const pathname = usePathname()
   const { isExpanded, isMobile, setMobileOpen } = useSidebar()
+  const { logout } = useAuth()
+  const router = useRouter()
   const expanded = isMobile || isExpanded
 
   function handleLinkClick() {
     if (isMobile) setMobileOpen(false)
+  }
+
+  function handleLogout() {
+    logout()
+    if (isMobile) setMobileOpen(false)
+    router.push("/")
   }
 
   return (
@@ -67,7 +77,7 @@ function SidebarNav({ mainLinks, user }: SidebarComponentProps) {
       </nav>
 
       {user && (
-        <div className={cn("border-t border-border p-3 bg-muted/5 overflow-hidden", !expanded && "flex justify-center px-2")}>
+        <div className={cn("border-t border-border p-3 bg-muted/5 overflow-hidden", !expanded && "flex flex-col items-center gap-2 px-2")}>
           <div className={cn("flex items-center", expanded ? "gap-3 w-full" : "justify-center")}>
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
               {user.name.charAt(0)}
@@ -79,6 +89,23 @@ function SidebarNav({ mainLinks, user }: SidebarComponentProps) {
               </div>
             )}
           </div>
+          {expanded ? (
+            <button
+              onClick={handleLogout}
+              className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          ) : (
+            <button
+              onClick={handleLogout}
+              title="Logout"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          )}
         </div>
       )}
     </>
